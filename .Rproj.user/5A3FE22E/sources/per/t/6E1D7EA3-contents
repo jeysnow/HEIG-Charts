@@ -1,0 +1,720 @@
+---
+title: "Governance of private Brazilian HEIs"
+author: "Godoy"
+date: '2022-08-16'
+output:
+  pdf_document:
+    toc: true
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r mySetup, include=FALSE}
+
+
+library(tidyverse)
+library(data.table)
+library(tinytex)
+
+
+
+#importing----
+HEIG_DATA <- read.csv("HEIG_Data.csv", header = TRUE, sep = ";", strip.white = TRUE)
+
+
+#factoring----
+HEIG_DATA$Maintainer_Type <-
+  factor(HEIG_DATA$Maintainer_Type, levels = 
+           c("Limited", "Corporate", "Association", "Special", "Foundation")
+           )
+
+HEIG_DATA$HEI_Type <-
+  factor(HEIG_DATA$HEI_Type, levels = 
+           c("University", "Uni_Center", "Faculty")
+           )
+
+HEIG_DATA$Rector_Appointment <- 
+  factor(HEIG_DATA$Rector_Appointment, levels = 
+           c("Universitocracy",  "Academicracy",  "Designatory-Colaborative",  "Designatory-Directive"))
+
+
+
+
+
+HEIG_DATA[18:29]<- lapply(HEIG_DATA[18:29],
+       factor, levels = c("Executive", "Board", "Both", "None")
+              )
+
+
+HEIG_DATA[6:17] <- sapply(HEIG_DATA[6:17], "as.logical")
+
+HEIG_DATA$Maintainer_Profit <- sapply(HEIG_DATA$Maintainer_Type, FUN = function(x){
+  if(x == "Limited" || x == "Corporate"){
+    return("For-Profit")
+    }
+  else return("Nonprofit")
+  }) %>% factor()
+
+setDT(HEIG_DATA)
+
+HEIG_DATA[,ID:= 1:length(HEIG_DATA$HEI_Name)] %>% 
+  setkey(cols=ID)
+
+summary(HEIG_DATA)
+
+
+#REP_Table----
+
+#Subsetting the representation variables, as percentages of each category
+REP_TABLE <- HEIG_DATA[,.(
+  Student = mean(Repres_Student),
+  Alumni = mean(Repres_Alumni),
+  Academic = mean(Repres_Academic),
+  Executive = mean(Repres_Exec),
+  Staff = mean(Repres_Staff),
+  Industry = mean(Repres_Industry),
+  Union = mean(Repres_Union),
+  Owner = mean(Repres_Owner),
+  Government = mean(Repres_Government),
+  Community = mean(Repres_Community)
+),by= .(Maintainer_Type)] %>% 
+  #Renaming the grouped category to be able to bind the next round
+  setnames("Maintainer_Type","Institutional_Category")
+
+
+#rbind adds the rows below the first table, granted they have the same col names
+REP_TABLE <- rbind(REP_TABLE,
+      HEIG_DATA[,.(
+        Student = mean(Repres_Student),
+        Alumni = mean(Repres_Alumni),
+        Academic = mean(Repres_Academic),
+        Executive = mean(Repres_Exec),
+        Staff = mean(Repres_Staff),
+        Industry = mean(Repres_Industry),
+        Union = mean(Repres_Union),
+        Owner = mean(Repres_Owner),
+        Government = mean(Repres_Government),
+        Community = mean(Repres_Community)
+      ),by= .(HEI_Type)] %>% 
+        #Renaming the grouped category to be able to bind the next round
+        setnames("HEI_Type","Institutional_Category"))
+
+REP_TABLE <- rbind(REP_TABLE,
+      HEIG_DATA[,.(
+        Student = mean(Repres_Student),
+        Alumni = mean(Repres_Alumni),
+        Academic = mean(Repres_Academic),
+        Executive = mean(Repres_Exec),
+        Staff = mean(Repres_Staff),
+        Industry = mean(Repres_Industry),
+        Union = mean(Repres_Union),
+        Owner = mean(Repres_Owner),
+        Government = mean(Repres_Government),
+        Community = mean(Repres_Community)
+      ),by= .(Maintainer_Profit)] %>% 
+        #Renaming the grouped category to be able to bind the next round
+        setnames("Maintainer_Profit","Institutional_Category"))
+
+REP_TABLE <- rbind(REP_TABLE,
+                   HEIG_DATA[,.(
+                     Student = mean(Repres_Student),
+                     Alumni = mean(Repres_Alumni),
+                     Academic = mean(Repres_Academic),
+                     Executive = mean(Repres_Exec),
+                     Staff = mean(Repres_Staff),
+                     Industry = mean(Repres_Industry),
+                     Union = mean(Repres_Union),
+                     Owner = mean(Repres_Owner),
+                     Government = mean(Repres_Government),
+                     Community = mean(Repres_Community)
+                   ),by= .(Certif_Communitarian
+                   )][, #excluding the logical variable for grouping
+                      Certif_Communitarian:=NULL][1, #creating the category for binding, with the correct value
+                                                  Institutional_Category := "Certif_Communitarian"][1,])
+
+
+REP_TABLE <- rbind(REP_TABLE,
+                   HEIG_DATA[,.(
+                     Student = mean(Repres_Student),
+                     Alumni = mean(Repres_Alumni),
+                     Academic = mean(Repres_Academic),
+                     Executive = mean(Repres_Exec),
+                     Staff = mean(Repres_Staff),
+                     Industry = mean(Repres_Industry),
+                     Union = mean(Repres_Union),
+                     Owner = mean(Repres_Owner),
+                     Government = mean(Repres_Government),
+                     Community = mean(Repres_Community)
+                   ),by= .(Certif_Relig
+                   )][, #excluding the logical variable for grouping
+                      Certif_Relig:=NULL][1, #creating the category for binding, with the correct value
+                                              Institutional_Category := "Certif_Relig"][1,])
+
+#transforms table into long format for ease of charting
+REP_TABLE <- melt(REP_TABLE, 
+     id.vars = "Institutional_Category",
+     measure.vars = c(2:11),
+     variable.name = "Stakeholder",
+     value.name = "Repres_Freq"
+       )
+
+# Responsibilities----
+
+#data.table function is necessary to create a copy, not just a reference.
+RESPONSIBILITY_TABLE <- data.table(HEIG_DATA)
+
+
+#Get rid of the unwanted columns
+RESPONSIBILITY_TABLE[,8:17 := NULL][,ID:= 1:length(RESPONSIBILITY_TABLE$HEI_Name)][,]
+
+
+#adjust the names for the model matrix operation
+RESPONSIBILITY_TABLE[,8:19] %>%
+  names() %>%
+  sub(pattern = "(.*)", replacement = "\\1_") %>% 
+  setnames(x=RESPONSIBILITY_TABLE,old = 8:19)
+
+## separating the factors into columns----
+RESPONSIBILITY_TABLE <- as.data.table(model.matrix(~Plan_Academic_ -1,
+                                   data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)] %>% 
+  merge(by= "ID", y= as.data.table(model.matrix(
+    ~Plan_Financial_ -1,data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)])  %>% 
+  merge(by= "ID", y= 
+          as.data.table(model.matrix(
+            ~Plan_Org_ -1,data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Plan_Staff_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Decide_Academic_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Decide_Financial_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Decide_Org_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Decide_Staff_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Supervise_Academic_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Supervise_Financial_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Supervise_Org_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  merge(by= "ID", y=
+          as.data.table(model.matrix(~Supervise_Staff_ -1,
+                       data = RESPONSIBILITY_TABLE))[,ID:= 1:length(RESPONSIBILITY_TABLE$ID)]) %>% 
+  #Finnally, merge it all back to responsibility_table 
+  merge(by="ID", x= RESPONSIBILITY_TABLE)
+
+#excluding old columns, note that ID became col #1, thus the numbers shift by 1
+RESPONSIBILITY_TABLE[,9:20:=NULL] 
+
+
+## Converting the numbers----
+
+#Converting the numbers to means by institutional category
+RESPONSIBILITY_TABLE <- RESPONSIBILITY_TABLE[,lapply(.SD,mean), .SDcols = 10:length(RESPONSIBILITY_TABLE),
+                     by = Maintainer_Type] %>% 
+  setnames("Maintainer_Type","Institutional_Category") %>% 
+  rbind(
+    RESPONSIBILITY_TABLE[,lapply(.SD,mean), .SDcols = 10:length(RESPONSIBILITY_TABLE),
+                         by = HEI_Type] %>% 
+      setnames("HEI_Type","Institutional_Category")
+  ) %>% 
+  rbind(
+    RESPONSIBILITY_TABLE[,lapply(.SD,mean), .SDcols = 10:length(RESPONSIBILITY_TABLE),
+                         by = Maintainer_Profit] %>% 
+      setnames("Maintainer_Profit","Institutional_Category")
+  ) %>% 
+  rbind(
+    RESPONSIBILITY_TABLE[,lapply(.SD,mean), .SDcols = 10:length(RESPONSIBILITY_TABLE),
+                         by = Certif_Communitarian][,Certif_Communitarian:=NULL][,Institutional_Category := "Certif_Communitarian"][1,]) %>% 
+      rbind(
+    RESPONSIBILITY_TABLE[,lapply(.SD,mean), .SDcols = 10:length(RESPONSIBILITY_TABLE),
+                         by = Certif_Relig] [,Certif_Relig:=NULL][,Institutional_Category := "Certif_Relig"][1,])
+
+
+# Selecting governance step combined with governance theme allows me to isolate 
+#the responsible party,l and then rename the levels based on the order of appearance of the columns
+
+RESPONSIBILITY_TABLE <- melt(RESPONSIBILITY_TABLE,
+     id.vars = "Institutional_Category",
+     measure.vars = patterns(names(HEIG_DATA[,18:29])),
+     variable.name = "Responsible_party",
+     value.name = names(HEIG_DATA[,18:29]),
+     variable.factor = TRUE)
+
+
+levels(RESPONSIBILITY_TABLE$Responsible_party) <- c("Executive", "Board", "Both", "None")  
+
+#selecting the patterns allow the grouping of governance themes.
+RESPONSIBILITY_TABLE <- melt(RESPONSIBILITY_TABLE,
+     id.vars = c("Institutional_Category","Responsible_party"),
+     measure.vars = patterns("Plan", "Decide", "Supervise"),
+     variable.name = "Governance_Theme",
+     value.name = c("Plan", "Decide", "Supervise"),
+     variable.factor = TRUE)
+
+levels(RESPONSIBILITY_TABLE$Governance_Theme) <- c("Academic", "Financial", "Organizational", "Staff")
+
+# The levels here worked automatically because there was only one column name for each measure.vars
+RESPONSIBILITY_TABLE <- melt(RESPONSIBILITY_TABLE,
+     id.vars = c("Institutional_Category","Responsible_party", "Governance_Theme"),
+     measure.vars = c("Plan", "Decide", "Supervise"),
+     variable.name = "Governance_Role",
+     value.name = "Bylaw_Freq",
+     variable.factor = TRUE)
+```
+
+\newpage
+# Introduction
+
+This document shows an overview of the governance of `r length(HEIG_DATA$HEI_Name)` private Brazilian Higher Education Institutions (HEIs). The focus here is to assess potential differences in governance that may emerge from distinguishing between legal forms, academic status and profit distribution. The next section explains the variables chosen, their theoretical references and potential values. The third section presents charts that summarize the findings. Bibliography, as tradition dictates, is the last section.
+
+
+# Variables
+
+The following table has a summary of the variables used to report on the governance of HEIs in this study. After the table, this section continues with the reasoning behind these variables.
+
+## Summary of variables
+
+| **Code** | **Variable** | **Values** |
+|:------:|:------|:------|
+| **Institutional factors** |
+| Maintainer_Type  | Legal form of the maintainer | Association, Foundation, Special (Parastatal) , Corporate (Anonymous Society) or Limited (Limited Liability Society & Simple Society) |
+| HEI_Type  | Academic level of the HEI | University, Uni_Center (Universitary Center) or Faculty |
+| Maintainer_Profit  | Whether the Maintainer legal form allows profit distribution among owners or executives | For-Profit (Corporate, Limited), Nonprofit (Association, Foundation, Special) |
+| Institutional_Category  | A variable that combines the previous variables and includes Communitarian and Religious forms | Association, Foundation, Special, Corporate, Limited, University, Uni_Center, Faculty, For-Profit, Nonprofit, Certif_Comunitarian or Certif_Relig  |
+| **Governance structure** |
+| Board_Amount  | Number of upper collegiate bodies stated in the bylaws   | Integer |
+| Relative_Freq  | Proportion of the total HEIs which adopt this amount of boards | Percentage |
+| Stakeholder  | Which stakeholders are represented in any of the upper boards | Students, alumni, academics, staff, executive, owners, government, community, industry or unions |
+| Repres_Freq  | Proportion of the total HEIs which have this stakeholder represented at any upper board | Percentage |
+| **Governance Process** |
+| Rector Appointment  | Type of rector appointment | Universitocracy, academicracy, designatory-colaborative, designatory-directive |
+| Governance_Role  | What step of decision making is delegated | Plan, decide or supervise |
+| Responsible_Party  | Governance structure responsible for the decision making step | Board, both, executive or none |
+| Bylaw_Freq  | Proportion of the total HEIs which have this decision-making responsibility designated in its bylaws | Percentage |
+
+
+## Institutional factors
+
+### Legal Form
+
+In Brazil, HEIs do not have a legal personality, meaning that they're unable to sign contracts or own property. The legal matters are attended by what are called Maintainers, which are legal persons that instituted the HEI and are responsible for funding that HEI's activities (CNE, 2002). Despite that, HEIs are legally granted financial autonomy, to the limit where such autonomy would inccur in increase in expenses, in which case the maintainer retains a veto power (CNE, 2002).  
+
+For private Maintainers, six potential legal forms were identified from a sample of HEIs from the Brazilian Higher Education Census (2020):
+
+**For-profit**
+
+- **Individual Enterprise**: legal entity owned by only one person,
+- **Limited Liability Society**: legal entity composed of two or more people,
+- **Anonymous society**: same as above, but its ownership is trade as stocks,
+- **Simple society**: same as the Limited Liability, but limited to owners from the same professional category.
+
+**Nonprofits**
+
+- **Association**: legal entity composed of two or more people, which doesn't pay dividends to its owners,
+- **Foundation**: legal entity with no owners, just assets and a statute overseen by the government,
+- **Parastatal**: An association created by the State for a professional category, to which contribution is mandatory, but its run independently from the government.
+
+### Academic Structure
+
+According to decree 9.235/17, HEIs may be structured in three distinct forms: Faculties, University Centers and Universities. 
+Every private HEI is, *a priori*, a **Faculty.**. This means that the HEI can only operate in one city (CNE,). To become a **University Center**, the HEI must have:
+
+- one fifth of its faculty as full-time employees,
+- one third of its faculty with degree of masters or above,
+- at least 8 programs approved by the Ministry,
+- extension activities for every programs,
+- scientific initiation program,
+- institutional evaluation of at least 4 out of 5,
+- no penalties applied to it  in the last two years.
+
+As a **University Center**, the HEI has autonomy to create new programs, although they'll still need to be certified by the Ministry later, and is also allowed to operate in more than one city, with multiple *campi* within the same federative state. **Universities** have this autonomy as well, and to become one the HEI must have, in addition to the previous requirements:
+
+- one third of its faculty as full-time employees,
+- at least 60% of its programs approved by the Ministry,
+- four masters and two doctorate programs recognized by the Ministry.
+
+The governance requirements steming from these forms are noted below.
+
+### Qualification
+
+According to law 9.394/96, Brazilian private HEIs may be qualified as:
+
+**Communitary** HEIs, according to law 12.881/13, are only those certified by the Ministry, and have the possibility of accessing funds open to public HEIs, public infrastructure and firming contracts directly with the State. This certification comes with governance requirements, noted in the next section.
+
+**Confessional** HEIs self-qualified, attending to a confessional and ideological orientation.This qualification doesn't have governance requirements, but it may indicate patterns in the governance of HEIs.
+
+
+## Governance requirements
+
+The focus here lies in the governance of the HEI, as structured by its bylaws. Every HEI's bylaws must be approved by the National Council of Education (CNE, 2002), which may have an isomorphic effect on the overall structure. Beyond this soft regulation, there are some legal requirements for private HEIs, depending on their academic structure and qualification.
+
+According to CNE (2002), all HEIs must:
+
+- have collegiate bodies (art. 206, VI, Brazilian Federal Constitution)
+- allow veto power to its maintainer, on financial matters that increase expenses (1.4.1, CNE 282/02)
+- faculty must be represented on the collegiate bodies (1.4.1, CNE 282/02)
+- identify the method of executive appointment (1.5, CNE 282/02)
+
+**Universities** and **University Centers** must also delegate to their scientific and educational bodies the following decisions: (§ 1º, art. 53, law 9.394/96)
+- Creation, modification or extinction of programs,
+- increment or decrease in their offer of program placements,
+- program content, 
+- planning of research and extension activities,
+- hiring and dismissing faculty,
+- faculty career plan.
+
+Finally, **Comunitary** HEIs, according to law 12.881/13, must:
+
+- publish annual reports, including financial,
+- disclose any public funds received or used,
+- instate a fiscal board, to oversee financial management,
+- have representatives of academics, students and administrative staff on the academic council.
+
+## Governance Structure
+
+### Board amount
+
+Number of deliberative decision-making bodies identified as responsible for the upper management in the bylaws. This does not include the Permanent Commission for Evaluation (CPA), which is mandated by the law 10.861/04, since it is an autonomous unit from the HEI. 
+
+
+### Stakeholder representation
+
+Based on the works of Viancos González and Ganga Contreras (2021) as well as Choi (2019), nine common stakeholders for HEIs were identified:
+
+- students 
+- alumni 
+- academics
+- Staff 
+- Owners
+- Government 
+- Community
+- Industry
+- Unions
+
+However, there are no rules that mandate or forbid the participation of Rectors and other top executives in the HEI's boards, thus, I include them as a category, and I further specify each category:
+
+- students: Currently enrolled student;
+- alumni: ex-students that completed their programs;
+- academics: professors and lecturers;
+- executive: members of the top executive team;
+- staff: Current employed, non-academics;
+- owners: Representatives for the maintainer;
+- government: Representatives for any governmental level;
+- community: Any person so qualified;
+- industry: business person or a representative from a business association;
+- unions: Representative for labor unions of academics and/or staff.
+
+Thus, for this work I understand that each of these stakeholders is represented in the governance structure of the HEI if there is a provision of **at least one seat in any of the boards** for them. This does not count representation on the CPA, since it's an mandatory and autonomous body.
+
+That said, there are some minimum requirements for the HEIs in terms of stakeholder representation: **Every HEI** must have at least one academic representative (CNE, 2002). Further, **Communitary** HEIs must have representation of academics, students and administrative staff on their academic board (Law 12.881/13)
+
+
+## Governance process
+
+One important dimension of governance is the way the strategic decision process is shared between principal and agent (Fama & Jansen, 1983). According to these authors, this division can be broadly identified in four steps:
+
+- *initiation*: generating proposals,
+- *ratification*: choosing what is to be implemented,
+- *implementation*: execution of ratified decisions,
+- *monitoring*: Performance measure and reward implementation.
+
+Thus, to assess who is responsible for the HEI's performance, it is important to assess who is represented in each step of the decision making. Thus, based on the bylaws, I try to verify if these steps are assigned to the *Board* (any of them), to the *Executive* team (any member of the top management team), if the responsibility is shared or if the responsibility is not assigned in the bylaws.
+
+To make it less abstract, I'll consider the four dimensions of Universitary autonomy proposed by Esterman and Nokkala (2009): *Academic*, *Financial*, *Organizational* and *Staff*. However, when considering these themes, the implementation step, as proposed by Fama and Jansen (1983) becomes obsolete, since neither top management nor boards effectively execute the policies analysed by the themes proposed by Esterman and Nokkala (2009). Thus, the following table lists activities that indicate the responsibility over each theme, for three decision-making steps: *Plan*, *Decide* and *Supervise*:
+
+| **Step** | **Academic** | **Financial** | **Organizational** | **Staff** |
+|:------:|:------|:------|:------|:------|
+| **Plan** | Propose new programs or the termination of existing programs | Propose Budget | Propose  changes to the bylaws | Propose hiring, firing and progression |
+| **Decide** | Approve new programs or the termination of existing programs | Approve budget | Approve changes to the bylaws |approving hiring, firing and progression |
+| **Supervise** | supervise program evaluation | Supervise financials | punish bylaw infringement | supervise and adjudicate on hiring, firing and progression matters |
+
+
+# Descriptive statistics
+
+## Institutional distribution
+
+| **Institutional_Type** | **Ocurences** |
+|:------|:------:|
+|**Maintainer_Type**|
+| Association | 7|
+| Limited | 10 |
+| Fountadion | 3 |
+|**Maintainer_Profit**|
+| Nonprofit | 10|
+| For-profit | 10 |
+|**HEI_Type**|
+| University | 3|
+| Uni_Center | 5 |
+| Faculty | 12 |
+|**Qualification**|
+| Certif_Communitarian | 3 |
+| Certif_Relig | 2 |
+
+## Rector Appointment Process
+
+
+
+```{r}
+ggplot(HEIG_DATA, aes(x=factor(Maintainer_Type), fill= factor(Rector_Appointment)))+
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("relative frequencies")
+
+ggplot(HEIG_DATA, aes(x=factor(HEI_Type), fill= factor(Rector_Appointment)))+
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("relative frequencies")
+
+ggplot(HEIG_DATA, aes(x=factor(Maintainer_Profit), fill= factor(Rector_Appointment)))+
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("relative frequencies")
+
+```
+
+
+## Number of Boards
+
+```{r}
+ggplot(HEIG_DATA, aes(x= Maintainer_Type, fill= factor(Board_Amount)))+
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("relative frequencies")
+
+ggplot(HEIG_DATA, aes(x= HEI_Type, fill= factor(Board_Amount)))+
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("relative frequencies")
+
+ggplot(HEIG_DATA, aes(x= Maintainer_Profit, fill= factor(Board_Amount)))+
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels=scales::percent) +
+  ylab("relative frequencies")
+```
+
+
+## Stakeholder representation
+
+```{r}
+# chart of average stakeholder representation (color) by maintainer type
+ggplot(REP_TABLE[Institutional_Category %in% levels(HEIG_DATA$Maintainer_Type) ]
+       , aes( x = Institutional_Category, fill= Stakeholder))+
+  geom_col(aes(y = Repres_Freq), position = "dodge" )+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of average stakeholder representation (color) by HEI type
+ggplot(REP_TABLE[Institutional_Category %in% levels(HEIG_DATA$HEI_Type) ]
+       , aes( x = Institutional_Category, fill= Stakeholder))+
+  geom_col(aes(y = Repres_Freq), position = "dodge" )+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of average stakeholder representation (color) by remaining categories
+ggplot(REP_TABLE[Institutional_Category %in% c("For-Profit","Nonprofit","Certif_Communitarian","Certif_Relig") ], 
+       aes( x = Institutional_Category, fill= Stakeholder))+
+  geom_col(aes(y = Repres_Freq), position = "dodge" )+
+  scale_y_continuous(labels=scales::percent)
+
+
+
+
+```
+
+
+
+
+## Responsibility
+
+
+
+### Academic
+
+```{r}
+
+# chart of stacked responsible parties by maintainer type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$Maintainer_Type)][
+  Governance_Theme == "Academic"],
+       aes( x = Governance_Role, 
+            y = Bylaw_Freq,
+            fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+  
+# chart of stacked responsible parties by HEI type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$HEI_Type)][
+  Governance_Theme == "Academic"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of stacked responsible parties by remaining institutional factors, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% 
+                              c("For-Profit","Nonprofit","Certif_Communitarian","Certif_Relig")][
+  Governance_Theme == "Academic"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+```
+
+
+### Financial
+
+```{r}
+# chart of stacked responsible parties by maintainer type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$Maintainer_Type)][
+  Governance_Theme == "Financial"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of stacked responsible parties by HEI type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$HEI_Type)][
+  Governance_Theme == "Financial"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of stacked responsible parties by remaining institutional factors, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% 
+                              c("For-Profit","Nonprofit","Certif_Communitarian","Certif_Relig")][
+                                Governance_Theme == "Financial"],
+       aes( x = Governance_Role, 
+            y = Bylaw_Freq,
+            fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+```
+
+
+### Organizational
+
+```{r}
+# chart of stacked responsible parties by maintainer type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$Maintainer_Type)][
+  Governance_Theme == "Organizational"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of stacked responsible parties by HEI type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$HEI_Type)][
+  Governance_Theme == "Organizational"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of stacked responsible parties by remaining institutional factors, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% 
+                              c("For-Profit","Nonprofit","Certif_Communitarian","Certif_Relig")][
+                                Governance_Theme == "Organizational"],
+       aes( x = Governance_Role, 
+            y = Bylaw_Freq,
+            fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+```
+
+
+
+### Staffing
+
+```{r}
+# chart of stacked responsible parties by maintainer type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$Maintainer_Type)][
+  Governance_Theme == "Staff"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of stacked responsible parties by HEI type, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% levels(HEIG_DATA$HEI_Type)][
+  Governance_Theme == "Staff"],
+  aes( x = Governance_Role, 
+       y = Bylaw_Freq,
+       fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+# chart of stacked responsible parties by remaining institutional factors, 
+# aggregated by governance role using facet_Grid
+ggplot(RESPONSIBILITY_TABLE[Institutional_Category %in% 
+                              c("For-Profit","Nonprofit","Certif_Communitarian","Certif_Relig")][
+                                Governance_Theme == "Staff"],
+       aes( x = Governance_Role, 
+            y = Bylaw_Freq,
+            fill= Responsible_party))+
+  geom_col(position = "fill" )+
+  facet_grid(.~Institutional_Category)+
+  scale_y_continuous(labels=scales::percent)
+
+```
+
+
+# Concluding remarks
+
+## Data collection
+
+- one HEI was listed as Limited in their government registry, but I know that it is ultimately owned by a corporation,
+- many institutions give rectors veto power over board decisions, with varying magnitudes,
+- some stakeholder representatives were not elected, but appointed by the rector,
+- every board has the participation of the Top Management Team. 
+
+## Statistical results
+
+- Of the three unviersities analyzed, two were both communitarian and religious,
+- HEIs maintained by a Limited company have the lowest representation of Owners in their boards, but have the highest representation of community,
+- Religious institutions have the highest representation of Alumni, and 100% of community representation,
+- Financial decision-making power is very low, but is higher in for-profit boards,
+- Staff decision making power is higher at nonprofit boards
+
+# Bibliography
+tbd

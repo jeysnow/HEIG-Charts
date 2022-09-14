@@ -1,0 +1,21 @@
+HEI_Name;Maintainer_Type;HEI_Type;Rector_Appointment;Board_Amount;Certif_Communitarian;Certif_Relig;Repres_Student;Repres_Alumni;Repres_Academic;Repres_Exec;Repres_Staff;Repres_Industry;Repres_Union;Repres_Owner;Repres_Government;Repres_Community;Plan_Academic;Plan_Financial;Plan_Org;Plan_Staff;Decide_Academic;Decide_Financial;Decide_Org;Decide_Staff;Supervise_Academic;Supervise_Financial;Supervise_Org;Supervise_Staff
+PUCPR;Association;University;Designatory-Directive;3;1;1;1;1;1;1;1;1;0;1;1;1;Board;None;None;None;Board;None;Board;Both;Board;Board;Board;Executive
+Fametro;Limited;Uni_Center;Designatory-Directive;1;0;0;1;0;1;1;0;0;0;0;0;0;None;None;None;Executive;None;None;None;None;None;Board;Executive;None
+UNICAP;Association;University;Designatory-Colaborative;5;1;1;1;0;1;1;1;1;0;1;0;1;None;Both;Board;None;Board;None;Board;Board;Executive;Both;Board;Executive
+ISESP;Association;Faculty;Designatory-Directive;2;0;0;1;0;1;1;0;0;0;1;0;0;Both;Executive;None;Both;Board;None;Board;Board;Board;Executive;Board;Board
+Uninassau Lauro Freitas;Limited;Faculty;Designatory-Directive;2;0;0;1;0;1;1;1;0;0;0;0;1;Board;Executive;Board;None;Board;None;Board;None;None;Board;Board;None
+FATEFIG;Limited;Faculty;Designatory-Directive;2;0;0;1;0;1;1;1;0;0;1;0;1;None;Executive;Board;Executive;Board;None;Board;None;None;None;Board;None
+FACEN Natal;Limited;Faculty;Designatory-Directive;1;0;0;1;0;1;1;1;0;0;1;0;1;Executive;Executive;Board;Both;None;None;Board;None;Executive;Board;Board;None
+FACESTA;Foundation;Faculty;Universitocracy;2;0;0;1;0;1;1;1;0;0;0;0;1;Board;None;Board;Executive;Board;None;Board;Executive;None;None;Executive;None
+Processus;Association;Uni_Center;Designatory-Directive;1;0;0;1;0;1;1;0;0;0;1;0;0;None;Executive;Board;Executive;Board;None;Board;None;Board;Executive;Executive;None
+Pitágoras João Pessoa;Limited;Faculty;Designatory-Directive;1;0;0;1;0;1;1;1;0;0;0;0;1;Board;Executive;Executive;Executive;None;None;Board;Executive;None;Executive;Executive;None
+Faculdade Carajás;Limited;Faculty;Designatory-Directive;1;0;0;1;0;1;1;1;0;0;1;0;1;None;Executive;None;Executive;Board;Board;Board;None;None;Board;Both;None
+USJT;Limited;University;Designatory-Directive;2;0;0;1;0;1;1;1;0;0;1;0;0;None;Executive;Board;None;Board;None;None;Board;None;None;Executive;None
+Unidavi;Foundation;Uni_Center;Universitocracy;1;1;0;1;0;1;1;1;0;0;1;0;0;Both;Both;Board;Board;Board;None;None;None;None;Executive;Both;Executive
+Faculdade Santa Helena;Association;Faculty;Designatory-Directive;1;0;0;1;0;1;1;1;0;0;1;0;1;None;None;Executive;Executive;Board;None;Board;Board;None;Both;Board;Board
+Faculdade Regional de Jaguaribana;Association;Faculty;Designatory-Directive;1;0;0;1;0;1;1;1;0;0;1;0;0;None;Executive;None;Executive;Board;None;Board;None;None;Executive;Board;None
+Estácio de Sá Brasília;Limited;Uni_Center;Designatory-Directive;2;0;0;1;0;1;1;1;0;0;1;0;1;Both;Executive;None;Executive;Board;None;Board;Executive;None;Executive;Both;None
+FACEX;Association;Uni_Center;Designatory-Directive;2;0;0;1;0;1;1;1;0;0;1;0;1;Both;Board;Board;Executive;Board;Board;Board;Board;Executive;Both;Both;Executive
+SOBRESP;Limited;Faculty;Designatory-Directive;2;0;0;1;0;1;1;1;0;0;0;0;0;Both;Executive;Board;Executive;Board;Both;Board;None;None;Executive;Executive;None
+Faculdade de Direito da FMP;Foundation;Faculty;Designatory-Directive;1;0;0;1;0;1;1;0;0;0;1;0;0;Executive;Executive;Executive;Executive;Board;None;Board;None;Board;Executive;None;None
+FASIPE Cuiabá;Limited;Faculty;Designatory-Directive;1;0;0;1;0;1;1;0;0;0;1;0;1;None;Executive;None;Executive;Board;Board;Board;None;None;Board;Both;None

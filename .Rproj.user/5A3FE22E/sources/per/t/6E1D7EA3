@@ -1,0 +1,27 @@
+{
+    "id": "6E1D7EA3",
+    "path": "D:/R Projects/HEIG_Charts/HEIG_Summary.Rmd",
+    "project_path": "HEIG_Summary.Rmd",
+    "type": "r_markdown",
+    "hash": "3549516634",
+    "contents": "",
+    "dirty": false,
+    "created": 1660668744484.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "278,8",
+        "scrollLine": "0"
+    },
+    "folds": "11|27|13|0|\n15|29|276|0|\n279|14|283|0|\n284|11|444|0|\n288|23|308|0|\n309|24|359|0|\n330|22|350|0|\n351|17|359|0|\n360|26|385|0|\n386|23|424|0|\n388|16|392|0|\n393|30|424|0|\n425|21|444|0|\n445|24|700|0|\n447|29|465|0|\n466|29|488|0|\n470|6|486|0|\n489|19|508|0|\n491|6|506|0|\n509|29|537|0|\n511|6|533|0|\n538|17|700|0|\n542|12|581|0|\n544|6|579|0|\n582|13|620|0|\n584|6|618|0|\n621|18|660|0|\n623|6|657|0|\n661|12|700|0|\n663|6|698|0|\n",
+    "lastKnownWriteTime": 1661532503,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1661532503241,
+    "read_only": false,
+    "read_only_alternatives": []
+}
